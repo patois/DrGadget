@@ -1,0 +1,10 @@
+what's new:
+
+- fork of Dr.Gadget plugin
+- rop "payload" is saved to/loaded from IDB
+- (hopefully universal) support for all processor modules
+  supported by IDA itself (including 64bit etc.)
+- "plugin" interface
+- IDA disassembly is kept in its original state
+
+this is an alpha version, not recommended for productive use 
