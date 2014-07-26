@@ -2,6 +2,7 @@ import idaapi
 from idc import *
 import pickle
 
+# add support for xrefs?
 class Item:
     TYPE_DATA = 0
     TYPE_CODE = 1
@@ -64,6 +65,9 @@ class DisasmEngine:
 
     def set_max_insn(self, count):
         self.maxinstr = count
+
+    def get_max_insn(self):
+        return self.maxinstr
 
     def is_ret(self, ea):
         return idaapi.is_ret_insn(ea)

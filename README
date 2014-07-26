@@ -1,10 +1,15 @@
+Dr.rer.oec.Gadget IDAPython Plugin
+==================================
+
+IDAPython plugin for the Interactive Disassembler
+which can be used to analyze and create ROP
+payload.
+
 what's new:
 
 - fork of Dr.Gadget plugin
-- rop "payload" is saved to/loaded from IDB
+- ROP "payload" is saved to/loaded from IDB
 - (hopefully universal) support for all processor modules
   supported by IDA itself (including 64bit etc.)
-- "plugin" interface
+- "plugin" interface - write a plugin for this plugin! ;-)
 - IDA disassembly is kept in its original state
-
-this is an alpha version, not recommended for productive use 

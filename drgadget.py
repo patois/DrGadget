@@ -45,6 +45,9 @@
 #                          Please do feel free to fork/modify/do whatever you want and
 #                          please use responsibly :-)
 #
+#   2014/07/26 v0.44b -  * some fixes here and there
+#                        * '13158F73919A45915A479DD21C6170375C4BE4B7' edition
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:

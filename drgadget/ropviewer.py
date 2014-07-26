@@ -86,12 +86,15 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         else:
             elem = idaapi.COLSTR(elem, idaapi.SCOLOR_DNUM)
         cline += elem
+        
         comm = ""
-        if SegStart(ea) != BADADDR:
-            comm = "  ; %s %s" % (SegName(ea), item.comment)
-        elif len(item.comment):
-            comm = "  ; %s" % item.comment
-        cline += idaapi.COLSTR(comm, idaapi.SCOLOR_AUTOCMT)
+        if typ == Item.TYPE_CODE and SegStart(ea) != BADADDR:
+            comm += "<%s> " % (SegName(ea))
+        if len(item.comment):
+            comm += " %s" % item.comment
+        if len(comm):
+            comm = "  ; " + comm
+            cline += idaapi.COLSTR(comm, idaapi.SCOLOR_AUTOCMT)
         return cline
 
 
@@ -162,7 +165,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         if n < self.payload.get_number_of_items():
             item = self.payload.get_item(n)
             s = AskStr(item.comment, "Enter Comment")
-            if s:
+            if s != None:
                 item.comment = s
             self.refresh()
 
@@ -256,16 +259,18 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             return None
         
         ea = self.payload.get_item(lineno).ea
-        """
-        g = Gadget()
-        dis = g.get_disasm(ea)
+        dis = self.payload.da.get_disasm(ea)
         hint = ""
+
         for l in dis:
             hint += idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
-        """
-        msg = "fixme"
-        return(len(msg), msg)
-        #return(len (dis), hint)
+
+        size_hint = len(dis)
+
+        if len(dis) == self.payload.da.get_max_insn():
+            hint += idaapi.COLSTR("...", idaapi.SCOLOR_CODNAME)
+            size_hint = len(hint)
+        return(size_hint, hint)
 
 
     def OnPopup(self):
@@ -291,14 +296,16 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.menu_deleteitem = self.AddPopupMenu("Delete item", "D")
             self.menu_edititem = self.AddPopupMenu("Edit item address", "E")
             self.menu_toggle = self.AddPopupMenu("Toggle item type", "O")
+            self.menu_comment = self.AddPopupMenu("Add comment", ":")
             self.menu_reset  = self.AddPopupMenu("Reset types")
             self.menu_jumpto = self.AddPopupMenu("Go to item address", "Enter")
             self.AddPopupMenu("-")
             self.menu_cutitem = self.AddPopupMenu("Cut item", "Ctrl-X")
             self.menu_copyitem = self.AddPopupMenu("Copy item", "Ctrl-C")
-            self.menu_pasteitem = self.AddPopupMenu("Paste item", "CTRL-V")
-
-        self.AddPopupMenu("-")
+            self.menu_pasteitem = self.AddPopupMenu("Paste item", "Ctrl-V")
+            self.AddPopupMenu("-")
+            self.menu_refresh = self.AddPopupMenu("Refresh", "R")
+            self.AddPopupMenu("-")
 
         # load dr gadget plugins
         for instance in self.pluginlist:
@@ -349,6 +356,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         elif menu_id == self.menu_toggle:
             self.toggle_item()
 
+        elif menu_id == self.menu_comment:
+            self.add_comment(self.GetLineNo())
+
         elif menu_id == self.menu_deleteitem:
             self.delete_item()
 
@@ -366,6 +376,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         elif menu_id == self.menu_pasteitem:
             self.paste_item()
+
+        elif menu_id == self.menu_refresh:
+            self.refresh()
 
         elif menu_id in self.pluginmenuids.keys():
             self.pluginmenuids[menu_id]()

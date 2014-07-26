@@ -1,5 +1,5 @@
 import idaapi
-import idc
+from idc import *
 from payload import Item
 
 # this "plugin" is so ugly, it definitely needs fixing at some point.
