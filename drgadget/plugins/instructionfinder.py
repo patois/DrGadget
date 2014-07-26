@@ -78,7 +78,7 @@ class SearchResultChoose(Choose2):
 
     def OnCommand(self, n, cmd_id):
         if cmd_id == self.copy_item_cmd_id:
-            self.payload.set_clipboard((0, "c", Item(self.list[n-1].ea, Item.TYPE_CODE)))
+            self.rv.set_clipboard((0, "c", Item(self.list[n-1].ea, Item.TYPE_CODE)))
 
         elif cmd_id == self.append_item_cmd_id:
             self.payload.append_item(Item(self.list[n-1].ea, Item.TYPE_CODE))

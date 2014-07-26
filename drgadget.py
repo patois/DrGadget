@@ -60,6 +60,12 @@
 #                             view results using hint popup thingie
 #                        * '564CFB9617B83F3434DB8633D6D501BDEFD5FAAC' edition
 #
+#   2014/07/26 v0.5b -   * fixed instruction finder plugin
+#                        * removed disasmviewer
+#                        * added contentviewer
+#                        * 'C7F255C8329EDA82EAE2E4E161B1F5DA9367FFB2' edition :D
+#
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
@@ -81,11 +87,13 @@ todo:
 - finish disasm "engine"
 - add xrefs to "items" class?
 - fix plugin hotkey handling
+- colored disassembly and hex viewers that
+  visually emphasize return instructions :)
 """
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.46b"
+__version__      =  "0.5b"
 
 
 import struct, os, sys

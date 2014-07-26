@@ -3,6 +3,7 @@ import os,sys, types
 from idc import *
 from payload import Item
 from copy import deepcopy
+import dataviewers
 
 drgadget_plugins_path = idaapi.idadir(os.path.join("plugins", "drgadget", "plugins"))
 
@@ -32,6 +33,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.pluginlist         = self.load_plugins()
 
         self.clipboard = None
+        self.dav = dataviewers.disasmviewer_t()
+        self.dav.Create()
+        self.dav.Show()
 
         idaapi.simplecustviewer_t.__init__(self)
 
@@ -122,6 +126,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
     def copy_item(self, n):
         item = self.get_item(n)
         if item != None:
+            print "copied item"
             self.set_clipboard((n, "c", item))
 
 
@@ -218,22 +223,41 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.EditLine(n, l)
             self.Refresh()
 
-
+    def jump_to_item_ea(self, n):
+        item = self.get_item(n)
+        if item != None:
+            if item.type == Item.TYPE_CODE:
+                Jump(item.ea)
+                    
     def refresh(self):
         self.ClearLines()
         for line in self.create_colored_lines():
             self.AddLine(line)
         self.Refresh()
 
+    def update_content_viewer(self):
+        n = self.GetLineNo()
+        item = self.get_item(n)
+        self.dav.clear()       
+        if item != None and item.type == Item.TYPE_CODE:
+            dis = self.payload.da.get_disasm(item.ea)
+
+            for l in dis:
+                colstr = idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
+                self.dav.add_line(colstr)
+            if len(dis) == self.payload.da.get_max_insn():
+                self.dav.add_line("...")
+        self.dav.update()
+
+    def OnClick(self, shift):
+        self.update_content_viewer()                
 
     def OnDblClick(self, shift):
         n = self.GetLineNo()
-        Jump(self.payload.get_item(n).ea)
+        self.jump_to_item_ea(n)
         return True
 
-
     def OnKeydown(self, vkey, shift):
-
         n = self.GetLineNo()
         
         # ESCAPE
@@ -242,11 +266,14 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         # ENTER
         elif vkey == 13:
-            Jump(self.payload.get_item(n).ea)
+            self.jump_to_item_ea(n)
             
         # CTRL
         elif shift == 4:
             if vkey == ord("C"):
+                # broke, wtf?
+                # ctrl-c suddenly doesn't work?!
+                print "copy?"
                 self.copy_item(n)
 
             elif vkey == ord("X"):
@@ -289,7 +316,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         else:
             return False
-        
+
+        self.update_content_viewer()        
         return True
 
 
@@ -301,9 +329,11 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         dis = self.payload.da.get_disasm(ea)
         hint = ""
 
+       
         for l in dis:
-            hint += idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
-
+            colstr = idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
+            hint += colstr
+           
         size_hint = len(dis)
 
         if len(dis) == self.payload.da.get_max_insn():

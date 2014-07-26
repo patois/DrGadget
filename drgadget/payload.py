@@ -72,7 +72,7 @@ class DisasmEngine:
     def __init__(self, proc):
         self.proc = proc
         self.maxinstr = 20 # max instructions to disasm per "gadget"
-        self.invalid_ins = "; invalid instruction"
+        self.msg_invalid_ins = "; invalid instruction"
 
     def set_max_insn(self, count):
         self.maxinstr = count
@@ -89,7 +89,7 @@ class DisasmEngine:
         if i != None:
             result = cur_ea + i.size
         return result
-    
+  
     def get_disasm(self, ea):
         next = ea
         disasm = []
@@ -100,6 +100,7 @@ class DisasmEngine:
             disasm.append (line)
             # TODO: stop disassembling at
             # user-defined instructions (taken from "proc" instance?)
+            # also: should unconditional jumps be followed? :)
             if self.is_ret(next):
                 # TODO: can we safely assume the return instruction
                 # to follow exactly one single instruction?
@@ -111,13 +112,13 @@ class DisasmEngine:
                         line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
                         disasm.append (line)
                     else:
-                        disasm.append (self.invalid_ins)
+                        disasm.append (self.msg_invalid_ins)
                 return disasm
             inscnt += 1
             # I hope "NextHead" is the correct function to use
             next = self.get_next_addr (next)
             if next == BADADDR:
-                disasm.append (self.invalid_ins)
+                disasm.append (self.msg_invalid_ins)
         return disasm
     
 
