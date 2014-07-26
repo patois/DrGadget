@@ -65,6 +65,10 @@
 #                        * added contentviewer
 #                        * 'C7F255C8329EDA82EAE2E4E161B1F5DA9367FFB2' edition :D
 #
+#   2014/07/26 v0.51b -  * added support for colors to disasm for
+#                          more 'intuitive' navigation
+#                        * stuff
+#                        * '4D53FE63F32EFEB1F7E087D5718DF8F2EE995FF9' edition
 #
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
@@ -81,19 +85,20 @@
 known bugs:
 - payload.init()
 - plugin hotkeys
-- support stack directions?
+- ctrl-c suddenly broke?
 
 todo:
 - finish disasm "engine"
+- support stack directions?
 - add xrefs to "items" class?
 - fix plugin hotkey handling
-- colored disassembly and hex viewers that
+- colored hex viewer that
   visually emphasize return instructions :)
 """
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.5b"
+__version__      =  "0.51b"
 
 
 import struct, os, sys

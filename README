@@ -14,4 +14,5 @@ what's new:
 - "plugin" interface - write a plugin for this plugin! ;-)
 - IDA disassembly is kept in its original state
 - hotkeys "1" and "2" for decrementing and incrementing
-  an item's value, respectively
+  an item's value, respectively (yay, more interactivity)
+- context-sensitive content viewer(s), in bunt ;-)

@@ -72,7 +72,6 @@ class DisasmEngine:
     def __init__(self, proc):
         self.proc = proc
         self.maxinstr = 20 # max instructions to disasm per "gadget"
-        self.msg_invalid_ins = "; invalid instruction"
 
     def set_max_insn(self, count):
         self.maxinstr = count
@@ -83,42 +82,60 @@ class DisasmEngine:
     def is_ret(self, ea):
         return idaapi.is_ret_insn(ea)
 
-    def get_next_addr(self, cur_ea):
-        result = BADADDR
-        i = DecodeInstruction(cur_ea)
+    def disasm_single_ins(self, ea):
+        result = None
+        i = DecodeInstruction(ea)
         if i != None:
-            result = cur_ea + i.size
+            stream = GetManyBytes(ea, i.size, use_dbg = True)
+            result = (ea, i, GetDisasmEx(ea, GENDSM_FORCE_CODE), self.is_ret(ea), stream)
         return result
-  
+
     def get_disasm(self, ea):
-        next = ea
+        disasm = []
+        insns = self.get_disasm_internal(ea)
+
+        for i in insns:
+            if i != None:
+                ea,ins,line,isret,strm = i
+                if isret:
+                    color = idaapi.SCOLOR_CREFTAIL
+                else:
+                    color = idaapi.SCOLOR_CODNAME
+                colstr = idaapi.COLSTR("%s\n" % line, color)
+            else:
+                colstr = idaapi.COLSTR("; invalid instruction \n", idaapi.SCOLOR_HIDNAME)
+            disasm.append(colstr)
+        if len(disasm) == self.get_max_insn():
+            disasm.append(idaapi.COLSTR("...", idaapi.SCOLOR_HIDNAME))
+        return disasm
+  
+    def get_disasm_internal(self, ea):
+        nextea = ea
         disasm = []
         endEA = idaapi.BADADDR
         inscnt = 0
-        while (next != endEA) and (inscnt < self.maxinstr):
-            line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
-            disasm.append (line)
-            # TODO: stop disassembling at
-            # user-defined instructions (taken from "proc" instance?)
-            # also: should unconditional jumps be followed? :)
-            if self.is_ret(next):
-                # TODO: can we safely assume the return instruction
-                # to follow exactly one single instruction?
-                # are there any processors that support both
-                # "delay-slot" and "non-delay-slot" return instructions?
-                if self.proc.uses_delay_slot():
-                    next = self.get_next_addr(next)
-                    if next != BADADDR:
-                        line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
-                        disasm.append (line)
-                    else:
-                        disasm.append (self.msg_invalid_ins)
-                return disasm
-            inscnt += 1
-            # I hope "NextHead" is the correct function to use
-            next = self.get_next_addr (next)
-            if next == BADADDR:
-                disasm.append (self.msg_invalid_ins)
+        while (nextea != endEA) and (inscnt < self.maxinstr):
+            ins = self.disasm_single_ins(nextea)
+            if ins != None:
+                ea,i,line,isret,strm = ins
+                disasm.append (ins)
+                nextea += i.size
+                # TODO: stop disassembling at
+                # user-defined instructions (taken from "proc" instance?)
+                # also: should unconditional jumps be followed? :)
+                if isret:
+                    # TODO: can we safely assume the return instruction
+                    # to follow exactly one single instruction?
+                    # are there any processors that support both
+                    # "delay-slot" and "non-delay-slot" return instructions?
+                    if self.proc.uses_delay_slot():
+                        disasm.append(self.disasm_single_ins(nextea))
+                    return disasm
+                inscnt += 1
+            else:
+                nextea = BADADDR
+            if nextea == BADADDR:
+                disasm.append (None)
         return disasm
     
 

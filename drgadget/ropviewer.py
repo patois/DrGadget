@@ -242,11 +242,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         if item != None and item.type == Item.TYPE_CODE:
             dis = self.payload.da.get_disasm(item.ea)
 
-            for l in dis:
-                colstr = idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
-                self.dav.add_line(colstr)
-            if len(dis) == self.payload.da.get_max_insn():
-                self.dav.add_line("...")
+            for line in dis:
+                self.dav.add_line(line)
+
         self.dav.update()
 
     def OnClick(self, shift):
@@ -331,14 +329,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
        
         for l in dis:
-            colstr = idaapi.COLSTR("%s\n" % l, idaapi.SCOLOR_CODNAME)
-            hint += colstr
+            hint += l
            
         size_hint = len(dis)
-
-        if len(dis) == self.payload.da.get_max_insn():
-            hint += idaapi.COLSTR("...", idaapi.SCOLOR_CODNAME)
-            size_hint = len(hint)
         return(size_hint, hint)
 
 
