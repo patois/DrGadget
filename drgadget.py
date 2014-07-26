@@ -70,7 +70,7 @@ todo:
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.43a"
+__version__      =  "0.44b"
 
 
 import struct, os, sys
