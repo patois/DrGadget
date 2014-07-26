@@ -9,7 +9,36 @@ class disasmviewer_t(idaapi.simplecustviewer_t):
     
     def Create(self):
         self.closed = False
-        if not idaapi.simplecustviewer_t.Create(self, "content"):
+        if not idaapi.simplecustviewer_t.Create(self, "Disasm"):
+            return False
+
+        self.content   = []
+        return True
+
+    def OnClose(self):
+        self.closed = True
+
+    def clear(self):
+        self.content = []
+
+    def add_line(self, l):
+        self.content.append(l)
+        self.update()
+
+    def update(self):
+        if self.closed:
+            self.Show()
+            self.closed = False
+        self.ClearLines()
+        for l in self.content:
+            self.AddLine(l)
+        self.Refresh()
+
+class hexviewer_t(idaapi.simplecustviewer_t):
+    
+    def Create(self):
+        self.closed = False
+        if not idaapi.simplecustviewer_t.Create(self, "Hexview"):
             return False
 
         self.content   = []

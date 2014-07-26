@@ -65,10 +65,13 @@
 #                        * added contentviewer
 #                        * 'C7F255C8329EDA82EAE2E4E161B1F5DA9367FFB2' edition :D
 #
-#   2014/07/26 v0.51b -  * added support for colors to disasm for
+#   2014/07/26 v0.52b -  * added support for colors to disasm for
 #                          more 'intuitive' navigation
 #                        * stuff
 #                        * '4D53FE63F32EFEB1F7E087D5718DF8F2EE995FF9' edition
+#
+#   2014/07/26 v0.52b -  * added context-sensitive hexview
+#                        * '6B322BC68ED48EE5E48AC3708FC7663B3A4FC629' edition
 #
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
@@ -98,7 +101,7 @@ todo:
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.51b"
+__version__      =  "0.52b"
 
 
 import struct, os, sys

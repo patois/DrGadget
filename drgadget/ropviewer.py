@@ -37,6 +37,10 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.dav.Create()
         self.dav.Show()
 
+        self.hv = dataviewers.hexviewer_t()
+        self.hv.Create()
+        self.hv.Show()
+
         idaapi.simplecustviewer_t.__init__(self)
 
     def load_plugins(self):
@@ -235,20 +239,23 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.AddLine(line)
         self.Refresh()
 
-    def update_content_viewer(self):
+    def update_content_viewers(self):
         n = self.GetLineNo()
         item = self.get_item(n)
-        self.dav.clear()       
+        self.dav.clear()
+        self.hv.clear()
         if item != None and item.type == Item.TYPE_CODE:
             dis = self.payload.da.get_disasm(item.ea)
 
             for line in dis:
-                self.dav.add_line(line)
+                self.dav.add_line(line[0])
+                self.hv.add_line(line[1])
 
         self.dav.update()
+        self.hv.update()
 
     def OnClick(self, shift):
-        self.update_content_viewer()                
+        self.update_content_viewers()                
 
     def OnDblClick(self, shift):
         n = self.GetLineNo()
@@ -315,7 +322,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         else:
             return False
 
-        self.update_content_viewer()        
+        self.update_content_viewers()        
         return True
 
 
@@ -329,7 +336,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
        
         for l in dis:
-            hint += l
+            hint += l[0]
            
         size_hint = len(dis)
         return(size_hint, hint)

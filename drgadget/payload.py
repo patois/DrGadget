@@ -66,6 +66,13 @@ class TargetProcessor:
 
     def get_ptr_mask(self):
         return self.ptrsize_mask_mapper[self.get_pointer_size()]
+
+
+def to_hex_str(s):
+    hs = ""
+    for e in s:
+        hs += "%02X " % ord(e)
+    return hs
         
 
 class DisasmEngine:
@@ -86,7 +93,8 @@ class DisasmEngine:
         result = None
         i = DecodeInstruction(ea)
         if i != None:
-            stream = GetManyBytes(ea, i.size, use_dbg = True)
+            # TODO add support for dbg segments!
+            stream = GetManyBytes(ea, i.size, use_dbg = False)
             result = (ea, i, GetDisasmEx(ea, GENDSM_FORCE_CODE), self.is_ret(ea), stream)
         return result
 
@@ -97,16 +105,19 @@ class DisasmEngine:
         for i in insns:
             if i != None:
                 ea,ins,line,isret,strm = i
+                strm = to_hex_str(strm)
                 if isret:
                     color = idaapi.SCOLOR_CREFTAIL
                 else:
                     color = idaapi.SCOLOR_CODNAME
-                colstr = idaapi.COLSTR("%s\n" % line, color)
+                asm = idaapi.COLSTR("%s\n" % line, color)
+                data = idaapi.COLSTR("%s\n" % strm, color)
             else:
-                colstr = idaapi.COLSTR("; invalid instruction \n", idaapi.SCOLOR_HIDNAME)
-            disasm.append(colstr)
+                asm = idaapi.COLSTR("; invalid instruction \n", idaapi.SCOLOR_HIDNAME)
+                data = ""
+            disasm.append((asm, data))
         if len(disasm) == self.get_max_insn():
-            disasm.append(idaapi.COLSTR("...", idaapi.SCOLOR_HIDNAME))
+            disasm.append((idaapi.COLSTR("...", idaapi.SCOLOR_HIDNAME), data))
         return disasm
   
     def get_disasm_internal(self, ea):
