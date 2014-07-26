@@ -149,11 +149,11 @@ class disasmviewer_t(idaapi.simplecustviewer_t):
         elif menu_id == self.menu_populatestrings:
             self.popStrings = not self.popStrings
             if self.popStrings:
-                self.strBase = idc.AskLong(self.strBase, "Base displacement to use?")
+                self.strBase = AskLong(self.strBase, "Base displacement to use?")
             self.refresh()
 
         elif menu_id == self.menu_savetofile:
-            fileName = idc.AskFile(1, "", "Export ROP Disassembly")
+            fileName = AskFile(1, "", "Export ROP Disassembly")
             if fileName and self.save_to_file(fileName):
                 print "disasm saved to %s" % fileName
             
@@ -178,7 +178,7 @@ class drgadgetplugin_t:
     
     def run(self):
         if self.payload.get_number_of_items() == 0:
-            idc.Warning("Nothing to disassemble!")
+            Warning("Nothing to disassemble!")
         else:
             try:
                 self.disasm
