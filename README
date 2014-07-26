@@ -13,3 +13,5 @@ what's new:
   supported by IDA itself (including 64bit etc.)
 - "plugin" interface - write a plugin for this plugin! ;-)
 - IDA disassembly is kept in its original state
+- hotkeys "1" and "2" for decrementing and incrementing
+  an item's value, respectively

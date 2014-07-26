@@ -1,6 +1,7 @@
 import idaapi
 from idc import *
 import pickle
+from idautils import DecodeInstruction
 
 # add support for xrefs?
 class Item:
@@ -33,7 +34,8 @@ class TargetProcessor:
         if self.is_64bit:
             self.ptrsize = 8
 
-        self.ptrsize_mapper = {2:"H", 4:"I", 8:"Q"}
+        self.ptrsize_pyfmt_mapper = {2:"H", 4:"I", 8:"Q"}        
+        self.ptrsize_mask_mapper = {2:0xFFFF, 4:0xFFFFFFFF, 8:0xFFFFFFFFFFFFFFFF}
         self.datafmt_mapper = {2:"%04X", 4:"%08X", 8:"%016X"}
         self.endianness = idaapi.get_inf_structure().mf
 
@@ -57,16 +59,20 @@ class TargetProcessor:
 
     def get_ptr_pack_fmt_string(self):
         endiannesfmt = "<" if self.is_little_endian() else ">"
-        return endiannesfmt+self.ptrsize_mapper[self.get_pointer_size()]
+        return endiannesfmt+self.ptrsize_pyfmt_mapper[self.get_pointer_size()]
 
     def get_data_fmt_string(self):
-        return self.datafmt_mapper[self.ptrsize]
+        return self.datafmt_mapper[self.get_pointer_size()]
+
+    def get_ptr_mask(self):
+        return self.ptrsize_mask_mapper[self.get_pointer_size()]
         
 
 class DisasmEngine:
     def __init__(self, proc):
         self.proc = proc
         self.maxinstr = 20 # max instructions to disasm per "gadget"
+        self.invalid_ins = "; invalid instruction"
 
     def set_max_insn(self, count):
         self.maxinstr = count
@@ -76,6 +82,13 @@ class DisasmEngine:
 
     def is_ret(self, ea):
         return idaapi.is_ret_insn(ea)
+
+    def get_next_addr(self, cur_ea):
+        result = BADADDR
+        i = DecodeInstruction(cur_ea)
+        if i != None:
+            result = cur_ea + i.size
+        return result
     
     def get_disasm(self, ea):
         next = ea
@@ -93,13 +106,18 @@ class DisasmEngine:
                 # are there any processors that support both
                 # "delay-slot" and "non-delay-slot" return instructions?
                 if self.proc.uses_delay_slot():
-                    next = NextHead(next, endEA)
-                    line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
-                    disasm.append (line)
+                    next = self.get_next_addr(next)
+                    if next != BADADDR:
+                        line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
+                        disasm.append (line)
+                    else:
+                        disasm.append (self.invalid_ins)
                 return disasm
             inscnt += 1
             # I hope "NextHead" is the correct function to use
-            next = NextHead (next, endEA)
+            next = self.get_next_addr (next)
+            if next == BADADDR:
+                disasm.append (self.invalid_ins)
         return disasm
     
 
@@ -111,7 +129,6 @@ class Payload:
         self.items = items
         self.size = 0
         self.rawbuf = ""
-        self.clipboard = None
         self.nodename = "$ drgadget"
         self.proc = TargetProcessor()
         # would it be better to use inheritance?
@@ -164,14 +181,6 @@ class Payload:
                 f.close()
         return result
 
-    def clear_clipboard(self):
-        self.clipboard = None
-
-    def set_clipboard(self, item):
-        self.clipboard = item
-
-    def get_clipboard(self):
-        return self.clipboard
 
     def serialize_buf_from_items(self):
         buf = ""
@@ -194,18 +203,21 @@ class Payload:
     def get_number_of_items(self):
         return len(self.items)
 
+    def mask_ea(self, item):
+        item.ea = item.ea & self.proc.get_ptr_mask()
+        return item
 
     def get_item(self, n):
-        return self.items[n]
+        return self.mask_ea(self.items[n])
 
+    def set_item(self, n, item):
+        self.items[n] = item
 
     def insert_item(self, n, item):
         self.items.insert(n, item)
 
-
     def append_item(self, item):
         self.items.insert(len(self.items), item)
-
 
     def remove_item(self, n):
         self.items.pop(n)

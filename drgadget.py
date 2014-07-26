@@ -53,6 +53,13 @@
 #                        * minor changes/fixes
 #                        * 'C2CC13D4198DC2D0D55BFC5F03FC2A8BF92F1395' edition
 #
+#   2014/07/26 v0.46b -  * various fixes
+#                        * added hotkeys "1" and "2" which decrement and
+#                          increment an item's value, respectively
+#                          -> Comfortably adjust pointers using the keyboard,
+#                             view results using hint popup thingie
+#                        * '564CFB9617B83F3434DB8633D6D501BDEFD5FAAC' edition
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
@@ -78,7 +85,7 @@ todo:
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.45b"
+__version__      =  "0.46b"
 
 
 import struct, os, sys

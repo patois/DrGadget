@@ -2,6 +2,7 @@ import idaapi
 import os,sys, types
 from idc import *
 from payload import Item
+from copy import deepcopy
 
 drgadget_plugins_path = idaapi.idadir(os.path.join("plugins", "drgadget", "plugins"))
 
@@ -30,6 +31,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.window_created      = False
         self.pluginlist         = self.load_plugins()
 
+        self.clipboard = None
 
         idaapi.simplecustviewer_t.__init__(self)
 
@@ -72,30 +74,40 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
     def create_colored_line(self, n):
         # todo
-        item = self.payload.get_item(n)
-        typ = item.type
+        item = self.get_item(n)
+        if item != None:
+            typ = item.type
 
-        width = self.payload.proc.get_pointer_size()
-        cline = idaapi.COLSTR("%04X  " % (n*width), idaapi.SCOLOR_AUTOCMT)
-        ea = item.ea
-        fmt = self.payload.proc.get_data_fmt_string()
-        elem = fmt % ea
-        if typ == Item.TYPE_CODE:
-            color = idaapi.SCOLOR_CODNAME if SegStart(ea) != BADADDR else idaapi.SCOLOR_ERROR
-            elem = idaapi.COLSTR(elem, color)
-        else:
-            elem = idaapi.COLSTR(elem, idaapi.SCOLOR_DNUM)
-        cline += elem
-        
-        comm = ""
-        if typ == Item.TYPE_CODE and SegStart(ea) != BADADDR:
-            comm += "<%s> " % (SegName(ea))
-        if len(item.comment):
-            comm += " %s" % item.comment
-        if len(comm):
-            comm = "  ; " + comm
-            cline += idaapi.COLSTR(comm, idaapi.SCOLOR_AUTOCMT)
-        return cline
+            width = self.payload.proc.get_pointer_size()
+            cline = idaapi.COLSTR("%04X  " % (n*width), idaapi.SCOLOR_AUTOCMT)
+            ea = item.ea
+            fmt = self.payload.proc.get_data_fmt_string()
+            elem = fmt % ea
+            if typ == Item.TYPE_CODE:
+                color = idaapi.SCOLOR_CODNAME if SegStart(ea) != BADADDR else idaapi.SCOLOR_ERROR
+                elem = idaapi.COLSTR(elem, color)
+            else:
+                elem = idaapi.COLSTR(elem, idaapi.SCOLOR_DNUM)
+            cline += elem
+            
+            comm = ""
+            if typ == Item.TYPE_CODE and SegStart(ea) != BADADDR:
+                comm += "<%s> " % (SegName(ea))
+            if len(item.comment):
+                comm += " %s" % item.comment
+            if len(comm):
+                comm = "  ; " + comm
+                cline += idaapi.COLSTR(comm, idaapi.SCOLOR_AUTOCMT)
+            return cline
+
+    def clear_clipboard(self):
+        self.clipboard = None
+
+    def set_clipboard(self, item):
+        self.clipboard = item
+
+    def get_clipboard(self):
+        return self.clipboard
 
 
     def create_colored_lines(self):
@@ -107,52 +119,75 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
     
 
-    def copy_item(self):
-        if self.payload.get_number_of_items():
-            n = self.GetLineNo()
-            self.payload.set_clipboard((n, "c", self.payload.get_item(n)))
+    def copy_item(self, n):
+        item = self.get_item(n)
+        if item != None:
+            self.set_clipboard((n, "c", item))
 
 
-    def paste_item(self):
-        if self.payload.get_clipboard() != None:
-            n = self.GetLineNo()
-            _, mode, item = self.payload.get_clipboard()
-            self.payload.insert_item(n, Item(item.ea, item.type))
+    def paste_item(self, n):
+        if self.get_clipboard() != None:
+            _, mode, item = self.get_clipboard()
+            self.insert_item(n, item)
             self.refresh()
             if mode == 'x':
-                self.payload.clear_clipboard()
+                self.clear_clipboard()
 
 
-    def cut_item(self):
-        if self.payload.get_number_of_items():
-            n = self.GetLineNo()
-            self.payload.set_clipboard((n, "x", self.payload.get_item(n)))
-            self.delete_item(False)
+    def cut_item(self, n):
+        item = self.get_item_at_cur_line()
+        if item != None:
+            self.set_clipboard((n, "x", item))
+            self.delete_item(n, False)
 
+    def edit_item(self, n):
+        item = self.get_item(n)
+        if item != None:
+            val = item.ea
 
-    def insert_item(self):
-        n = self.GetLineNo() if self.Count() else 0
-        self.payload.insert_item(n, Item(0,Item.TYPE_DATA))
-        self.refresh()
-
-
-    def edit_item(self):
-        if self.payload.get_number_of_items():
-            n = self.GetLineNo()
-            val = self.payload.get_item(n).ea
-
-            # at the time of this writing, there is a "bug" in asklong()
-            # and askaddr(). these functions return 32bit values only,
-            # so editing 64bit values is impossible for now
-            # asklong supports IDC expressions
-            newVal = idaapi.asklong(val, self.payload.proc.get_data_fmt_string())
-            if newVal:
-                self.payload.get_item(n).ea = newVal
+            newVal = AskAddr(val, "Feed me!")
+            if newVal != None:
+                item.ea = newVal
+                self.set_item(n, item)
                 self.refresh()
 
+    def get_item(self, n):
+        item = None
+        if n < self.payload.get_number_of_items():
+            item = deepcopy(self.payload.get_item(n))
+        return item            
 
-    def delete_item(self, ask = True):
-        if self.payload.get_number_of_items():
+    def get_item_at_cur_line(self):
+        n = self.GetLineNo()
+        return self.get_item(n)
+
+    def inc_item_value(self, n):
+        item = self.get_item(n)
+        if item != None:
+            item.ea += 1
+            self.set_item(n, item)
+
+    def dec_item_value(self, n):
+        item = self.get_item(n)
+        if item != None:
+            item.ea -= 1
+            self.set_item(n, item)   
+
+    def insert_item(self, n, item=None):
+        if self.Count() == 0:
+            n = 0
+        if item == None:
+            item = Item(0, Item.TYPE_DATA)
+        self.payload.insert_item(n, item)
+        self.refresh()
+
+    def set_item(self, n, item):
+        self.payload.set_item(n, item)
+        self.refresh()
+
+    def delete_item(self, n, ask = True):
+        item = self.get_item(n)
+        if item != None:
             result = 1
             if ask:
                 result = AskYN(0, "Delete item?")
@@ -162,28 +197,25 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
 
     def add_comment(self, n):
-        if n < self.payload.get_number_of_items():
-            item = self.payload.get_item(n)
+        item = self.get_item(n)
+        if item != None:
             s = AskStr(item.comment, "Enter Comment")
             if s != None:
                 item.comment = s
-            self.refresh()
-
+                self.set_item(n, item)
                
-    def toggle_item(self):
-        if self.payload.get_number_of_items():
-            n = self.GetLineNo()
-
-            item = self.payload.get_item(n)
+    def toggle_item(self, n):
+        item = self.get_item(n)
+        if item != None:
             if item.type == Item.TYPE_CODE:
                 item.type = Item.TYPE_DATA
             else:
                 ea = item.ea
                 item.type = Item.TYPE_CODE
 
+            self.set_item(n, item)
             l = self.create_colored_line(n)
             self.EditLine(n, l)
-            #self.RefreshCurrent()
             self.Refresh()
 
 
@@ -201,6 +233,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
 
     def OnKeydown(self, vkey, shift):
+
+        n = self.GetLineNo()
         
         # ESCAPE
         if vkey == 27:
@@ -208,18 +242,17 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         # ENTER
         elif vkey == 13:
-            n = self.GetLineNo()
             Jump(self.payload.get_item(n).ea)
             
         # CTRL
         elif shift == 4:
             if vkey == ord("C"):
-                self.copy_item()
+                self.copy_item(n)
 
             elif vkey == ord("X"):
-                self.cut_item()
+                self.cut_item(n)
             elif vkey == ord("V"):
-                self.paste_item()
+                self.paste_item(n)
 
             elif vkey == ord("N"):
                 self.erase_all()
@@ -234,19 +267,25 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.add_comment(self.GetLineNo())
 
         elif vkey == ord('O'):
-            self.toggle_item()
+            self.toggle_item(n)
             
         elif vkey == ord('D'):
-            self.delete_item()
+            self.delete_item(n)
                 
         elif vkey == ord("E"):
-            self.edit_item()
+            self.edit_item(n)
 
         elif vkey == ord("I"):
-            self.insert_item()
+            self.insert_item(n)
 
         elif vkey == ord("R"):
             self.refresh()
+
+        elif vkey == ord("1"):
+            self.dec_item_value(n)
+
+        elif vkey == ord("2"):
+            self.inc_item_value(n)
 
         else:
             return False
@@ -334,6 +373,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
     
 
     def OnPopupMenu(self, menu_id):
+        n = self.GetLineNo()
+        
         if menu_id == self.menu_new:
             self.erase_all()
             
@@ -354,28 +395,28 @@ class ropviewer_t(idaapi.simplecustviewer_t):
                 self.refresh()
                               
         elif menu_id == self.menu_toggle:
-            self.toggle_item()
+            self.toggle_item(n)
 
         elif menu_id == self.menu_comment:
-            self.add_comment(self.GetLineNo())
+            self.add_comment(n)
 
         elif menu_id == self.menu_deleteitem:
-            self.delete_item()
+            self.delete_item(n)
 
         elif menu_id == self.menu_insertitem:
-            self.insert_item()
+            self.insert_item(n)
 
         elif menu_id == self.menu_edititem:
-            self.edit_item()
+            self.edit_item(n)
 
         elif menu_id == self.menu_copyitem:
-            self.copy_item()
+            self.copy_item(n)
 
         elif menu_id == self.menu_cutitem:
-            self.cut_item()
+            self.cut_item(n)
 
         elif menu_id == self.menu_pasteitem:
-            self.paste_item()
+            self.paste_item(n)
 
         elif menu_id == self.menu_refresh:
             self.refresh()
