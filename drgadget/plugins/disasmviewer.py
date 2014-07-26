@@ -108,7 +108,7 @@ class disasmviewer_t(idaapi.simplecustviewer_t):
         if nlo < self.payload.get_number_of_items():
             item = self.payload.get_item(nlo)
             s = AskStr(item.comment, "Enter Comment")
-            if s:
+            if s != None:
                 item.comment = s
             self.refresh()
             self.rv.refresh()

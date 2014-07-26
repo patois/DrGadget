@@ -48,6 +48,11 @@
 #   2014/07/26 v0.44b -  * some fixes here and there
 #                        * '13158F73919A45915A479DD21C6170375C4BE4B7' edition
 #
+#   2014/07/26 v0.45b -  * experimental support for processor modules that
+#                          support (branch) delay slots
+#                        * minor changes/fixes
+#                        * 'C2CC13D4198DC2D0D55BFC5F03FC2A8BF92F1395' edition
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
@@ -63,14 +68,17 @@
 known bugs:
 - payload.init()
 - plugin hotkeys
+- support stack directions?
 
 todo:
 - finish disasm "engine"
+- add xrefs to "items" class?
+- fix plugin hotkey handling
 """
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.44b"
+__version__      =  "0.45b"
 
 
 import struct, os, sys
@@ -143,8 +151,4 @@ class drgadget(idaapi.plugin_t):
 # -----------------------------------------------------------------------
 
 def PLUGIN_ENTRY():
-    return drgadget()      
-
-
-
-
+    return drgadget()

@@ -20,7 +20,8 @@ class TargetProcessor:
         self.is_32bit = (self.flags & idaapi.PR_USE32) != 0
         self.is_stack_up = (self.flags & idaapi.PR_STACK_UP) != 0
         self.id = idaapi.ph_get_id()
-        self.assembler = (self.flags & idaapi.PR_ASSEMBLE) != 0
+        self.is_assemble_supported = (self.flags & idaapi.PR_ASSEMBLE) != 0
+        self.is_delayslot_proc = (self.flags & idaapi.PR_DELAYED) != 0
         
         # processor default ret instruction (icode, not opcode!)
         self.ret_icodes = [idaapi.ph_get_icode_return()]
@@ -36,8 +37,11 @@ class TargetProcessor:
         self.datafmt_mapper = {2:"%04X", 4:"%08X", 8:"%016X"}
         self.endianness = idaapi.get_inf_structure().mf
 
+    def uses_delay_slot(self):
+        return self.is_delayslot_proc
+
     def supports_assemble(self):
-        return self.assembler
+        return self.is_assemble_supported
     
     def add_ret_icode(self, icode):
         self.ret_icodes.append(icode)
@@ -60,7 +64,8 @@ class TargetProcessor:
         
 
 class DisasmEngine:
-    def __init__(self):
+    def __init__(self, proc):
+        self.proc = proc
         self.maxinstr = 20 # max instructions to disasm per "gadget"
 
     def set_max_insn(self, count):
@@ -80,7 +85,17 @@ class DisasmEngine:
         while (next != endEA) and (inscnt < self.maxinstr):
             line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
             disasm.append (line)
+            # TODO: stop disassembling at
+            # user-defined instructions (taken from "proc" instance?)
             if self.is_ret(next):
+                # TODO: can we safely assume the return instruction
+                # to follow exactly one single instruction?
+                # are there any processors that support both
+                # "delay-slot" and "non-delay-slot" return instructions?
+                if self.proc.uses_delay_slot():
+                    next = NextHead(next, endEA)
+                    line = GetDisasmEx (next, GENDSM_FORCE_CODE)       
+                    disasm.append (line)
                 return disasm
             inscnt += 1
             # I hope "NextHead" is the correct function to use
@@ -99,7 +114,8 @@ class Payload:
         self.clipboard = None
         self.nodename = "$ drgadget"
         self.proc = TargetProcessor()
-        self.da = DisasmEngine()
+        # would it be better to use inheritance?
+        self.da = DisasmEngine(self.proc)
 
     def load_from_idb(self):
         node = idaapi.netnode(0x41414141)
