@@ -1,18 +1,26 @@
 Dr.rer.oec.Gadget IDAPython Plugin
 ==================================
 
-IDAPython plugin for the Interactive Disassembler
-which can be used to analyze and create ROP
-payload.
+This is an IDAPython plugin for the
+Interactive Disassembler for all your
+ROP experimentation needs ;-)
+
+Develop and analyze ROP exploits for
+all processor architectures supported
+by IDA itself!
 
 what's new:
 
-- fork of Dr.Gadget plugin
-- ROP "payload" is saved to/loaded from IDB
-- (hopefully universal) support for all processor modules
+* This is fork of the 'original' Dr.Gadget plugin
+* State is saved to and loaded from IDB by default
+* (hopefully universal) support for all processor modules
   supported by IDA itself (including 64bit etc.)
-- "plugin" interface - write a plugin for this plugin! ;-)
-- IDA disassembly is kept in its original state
-- hotkeys "1" and "2" for decrementing and incrementing
-  an item's value, respectively (yay, more interactivity)
-- context-sensitive content viewer(s), in bunt ;-)
+* "plugin" interface - write a plugin for this plugin! ;-)
+* IDA disassembly is kept in its original state
+* hotkeys "1" and "2" for decrementing and incrementing
+  an item's value, respectively (yay, more interactivity).
+  this allows you to interactively "browse" the disassembly
+  and memory for useful gadgets
+* context-sensitive content viewers
+  - now used to display data by default
+  - visually highlight return instructions

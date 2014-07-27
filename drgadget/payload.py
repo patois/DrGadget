@@ -70,8 +70,9 @@ class TargetProcessor:
 
 def to_hex_str(s):
     hs = ""
-    for e in s:
-        hs += "%02X " % ord(e)
+    if s != None:
+        for e in s:
+            hs += "%02X " % ord(e)
     return hs
         
 
@@ -93,8 +94,9 @@ class DisasmEngine:
         result = None
         i = DecodeInstruction(ea)
         if i != None:
-            # TODO add support for dbg segments!
-            stream = GetManyBytes(ea, i.size, use_dbg = False)
+            flags = GetSegmentAttr(ea, SEGATTR_FLAGS)
+            use_dbg = flags & SFL_DEBUG != 0
+            stream = GetManyBytes(ea, i.size, use_dbg)
             result = (ea, i, GetDisasmEx(ea, GENDSM_FORCE_CODE), self.is_ret(ea), stream)
         return result
 
@@ -117,7 +119,8 @@ class DisasmEngine:
                 data = ""
             disasm.append((asm, data))
         if len(disasm) == self.get_max_insn():
-            disasm.append((idaapi.COLSTR("...", idaapi.SCOLOR_HIDNAME), data))
+            cont = idaapi.COLSTR("...", idaapi.SCOLOR_HIDNAME)
+            disasm.append((cont, cont))
         return disasm
   
     def get_disasm_internal(self, ea):

@@ -65,13 +65,19 @@
 #                        * added contentviewer
 #                        * 'C7F255C8329EDA82EAE2E4E161B1F5DA9367FFB2' edition :D
 #
-#   2014/07/26 v0.52b -  * added support for colors to disasm for
+#   2014/07/26 v0.51b -  * added support for colors to disasm for
 #                          more 'intuitive' navigation
 #                        * stuff
 #                        * '4D53FE63F32EFEB1F7E087D5718DF8F2EE995FF9' edition
 #
 #   2014/07/26 v0.52b -  * added context-sensitive hexview
 #                        * '6B322BC68ED48EE5E48AC3708FC7663B3A4FC629' edition
+#
+#   2014/07/27 v0.53b -  * fixes
+#                        * support for debugger segments
+#                        * added viewer for generic information.
+#                          currently displays information about a segment
+#                        * '7E71D745AC168EE501D18345B38E192E91CFB182' edition
 #
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
@@ -95,13 +101,11 @@ todo:
 - support stack directions?
 - add xrefs to "items" class?
 - fix plugin hotkey handling
-- colored hex viewer that
-  visually emphasize return instructions :)
 """
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.52b"
+__version__      =  "0.53b"
 
 
 import struct, os, sys

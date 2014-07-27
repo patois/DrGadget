@@ -33,13 +33,18 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.pluginlist         = self.load_plugins()
 
         self.clipboard = None
-        self.dav = dataviewers.disasmviewer_t()
-        self.dav.Create()
+        
+        self.dav = dataviewers.simpledataviewer_t()
+        self.dav.Create("Disasm")
         self.dav.Show()
 
-        self.hv = dataviewers.hexviewer_t()
-        self.hv.Create()
+        self.hv = dataviewers.simpledataviewer_t()
+        self.hv.Create("Hex")
         self.hv.Show()
+
+        self.iv = dataviewers.simpledataviewer_t()
+        self.iv.Create("Info")
+        self.iv.Show()
 
         idaapi.simplecustviewer_t.__init__(self)
 
@@ -130,7 +135,6 @@ class ropviewer_t(idaapi.simplecustviewer_t):
     def copy_item(self, n):
         item = self.get_item(n)
         if item != None:
-            print "copied item"
             self.set_clipboard((n, "c", item))
 
 
@@ -244,15 +248,36 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         item = self.get_item(n)
         self.dav.clear()
         self.hv.clear()
-        if item != None and item.type == Item.TYPE_CODE:
-            dis = self.payload.da.get_disasm(item.ea)
+        self.iv.clear()
 
+
+        if item != None and item.type == Item.TYPE_CODE:
+
+            # get disassembly and hex stream
+            dis = self.payload.da.get_disasm(item.ea)
             for line in dis:
                 self.dav.add_line(line[0])
                 self.hv.add_line(line[1])
 
+            # get various info
+            seg = idaapi.getseg(item.ea)
+            if seg:
+                name      = idaapi.get_true_segm_name(seg)
+                perm      = seg.perm
+                ltype     = "ld" if seg.is_loader_segm() else "dbg"
+                ea_start  = seg.startEA
+                ea_end    = seg.endEA
+
+                perms = ""
+                perms += "R" if perm & idaapi.SEGPERM_READ != 0 else "."
+                perms += "W" if perm & idaapi.SEGPERM_WRITE != 0 else "."
+                perms += "X" if perm & idaapi.SEGPERM_EXEC != 0 else "."                
+                self.iv.add_line("<%s> [%X - %X], %s, [%s]" % (name, ea_start, ea_end, ltype, perms))
+
+
         self.dav.update()
         self.hv.update()
+        self.iv.update()
 
     def OnClick(self, shift):
         self.update_content_viewers()                
@@ -275,23 +300,30 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             
         # CTRL
         elif shift == 4:
+
             if vkey == ord("C"):
                 # broke, wtf?
                 # ctrl-c suddenly doesn't work?!
-                print "copy?"
+                print "dbg: copy!"
                 self.copy_item(n)
+           
+            elif vkey == ord("X"):
+                self.cut_item(n)
 
             elif vkey == ord("X"):
                 self.cut_item(n)
+
             elif vkey == ord("V"):
                 self.paste_item(n)
 
             elif vkey == ord("N"):
                 self.erase_all()
+
             elif vkey == ord("L"):
-                self.load_binary()
+                self.import_binary()
+
             elif vkey == ord("S"):
-                self.load_binary()
+                self.export_binary()
 
 
         # colon
@@ -361,9 +393,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.menu_loadfromfile = self.AddPopupMenu("Import ROP binary", "Ctrl-L")
             self.menu_savetofile = self.AddPopupMenu("Export ROP binary", "Ctrl-S")
             self.AddPopupMenu("-")
-            self.menu_insertitem = self.AddPopupMenu("New item", "I")
+            self.menu_insertitem = self.AddPopupMenu("Insert item", "I")
             self.menu_deleteitem = self.AddPopupMenu("Delete item", "D")
-            self.menu_edititem = self.AddPopupMenu("Edit item address", "E")
+            self.menu_edititem = self.AddPopupMenu("Edit item", "E")
             self.menu_toggle = self.AddPopupMenu("Toggle item type", "O")
             self.menu_comment = self.AddPopupMenu("Add comment", ":")
             self.menu_reset  = self.AddPopupMenu("Reset types")
@@ -386,33 +418,33 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         return True
 
-    def load_binary(self):
+    def import_binary(self):
         fileName = AskFile(0, "*.*", "Import ROP binary")
         if fileName and self.payload.load_from_file(fileName):
             self.refresh()
 
-    def save_binary(self):
+    def export_binary(self):
         fileName = AskFile(1, "*.*", "Export ROP binary")
         if fileName and self.payload.save_to_file(fileName):
             print "payload saved to %s" % fileName
 
     def erase_all(self):
-        if AskYN(1, "Are you sure?") == 1:
-            self.payload.init()
-            self.refresh()
+        self.payload.init()
+        self.refresh()
     
 
     def OnPopupMenu(self, menu_id):
         n = self.GetLineNo()
         
         if menu_id == self.menu_new:
-            self.erase_all()
+            if AskYN(1, "Are you sure?") == 1:
+                self.erase_all()
             
         elif menu_id == self.menu_loadfromfile:
-            self.load_binary()
+            self.import_binary()
 
         elif menu_id == self.menu_savetofile:
-            self.save_binary()
+            self.export_binary()
                         
         elif menu_id == self.menu_jumpto:
             n = self.GetLineNo()
