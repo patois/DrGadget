@@ -28,25 +28,21 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.menu_deleteitem    = None
         self.menu_edititem      = None
         self.menu_reset         = None
+        self.menu_comment       = None
  
         self.window_created      = False
+
+        self.capGadget = "Dr. Gadget"
+        self.capDisasm = "Disassembly"
+        self.capHex    = "Hexdump"
+        self.capInfo   = "Info"
+
+
         self.pluginlist         = self.load_plugins()
 
         self.clipboard = None
-        
-        self.dav = dataviewers.simpledataviewer_t()
-        self.dav.Create("Disasm")
-        self.dav.Show()
 
-        self.hv = dataviewers.simpledataviewer_t()
-        self.hv.Create("Hex")
-        self.hv.Show()
-
-        self.iv = dataviewers.simpledataviewer_t()
-        self.iv.Create("Info")
-        self.iv.Show()
-
-        idaapi.simplecustviewer_t.__init__(self)
+        idaapi.simplecustviewer_t.__init__(self)       
 
     def load_plugins(self):
         global drgadget_plugins_path
@@ -69,16 +65,17 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         if not self.window_created:
             self.window_created = True
             return idaapi.simplecustviewer_t.Show(self)
+
         return
     
     def Create(self):
-        if not idaapi.simplecustviewer_t.Create(self, "Dr. Gadget"):
+        if not idaapi.simplecustviewer_t.Create(self, self.capGadget):
             return False
         if self.payload:
             self.refresh()
         else:
             self.ClearLines()
-
+      
         return True
 
     def OnClose(self):
@@ -104,12 +101,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             cline += elem
             
             comm = ""
-            if typ == Item.TYPE_CODE and SegStart(ea) != BADADDR:
-                comm += "<%s> " % (SegName(ea))
             if len(item.comment):
-                comm += " %s" % item.comment
+                comm += " ; %s" % item.comment
             if len(comm):
-                comm = "  ; " + comm
                 cline += idaapi.COLSTR(comm, idaapi.SCOLOR_AUTOCMT)
             return cline
 
@@ -129,7 +123,6 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             l = self.create_colored_line(i)
             lines.append(l)
         return lines
-
     
 
     def copy_item(self, n):
@@ -166,6 +159,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
     def get_item(self, n):
         item = None
+        if n < 0:
+            n = 0
         if n < self.payload.get_number_of_items():
             item = deepcopy(self.payload.get_item(n))
         return item            
@@ -243,13 +238,33 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.AddLine(line)
         self.Refresh()
 
+    def show_content_viewers(self):
+       
+        self.dav = dataviewers.simpledataviewer_t()
+        self.dav.Create(self.capDisasm)
+
+        self.hv = dataviewers.simpledataviewer_t()
+        self.hv.Create(self.capHex)
+
+        self.iv = dataviewers.simpledataviewer_t()
+        self.iv.Create(self.capInfo)
+
+
+        self.dav.Show()
+        self.hv.Show()
+        self.iv.Show()
+        idaapi.set_dock_pos(self.capInfo, self.capGadget, 8, 0, 0, 20, 20)
+        idaapi.set_dock_pos(self.capDisasm, self.capGadget, 4)
+        idaapi.set_dock_pos(self.capHex, self.capGadget, 4)
+
+
     def update_content_viewers(self):
         n = self.GetLineNo()
         item = self.get_item(n)
+        
         self.dav.clear()
         self.hv.clear()
         self.iv.clear()
-
 
         if item != None and item.type == Item.TYPE_CODE:
 
@@ -279,7 +294,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.hv.update()
         self.iv.update()
 
-    def OnClick(self, shift):
+    def OnClick(self, shift):       
         self.update_content_viewers()                
 
     def OnDblClick(self, shift):
@@ -385,7 +400,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.menu_loadfromfile = self.AddPopupMenu("Import ROP binary", "Ctrl-L")
             self.AddPopupMenu("-")
             self.menu_insertitem = self.AddPopupMenu("New item", "I")
-            if self.payload.get_clipboard() != None:
+            if self.get_clipboard() != None:
                 self.menu_pasteitem = self.AddPopupMenu("Paste item", "Ctrl-V")
         else:
             self.menu_new = self.AddPopupMenu("New", "Ctrl-N")

@@ -11,7 +11,7 @@ by IDA itself!
 
 what's new:
 
-* This is fork of the 'original' Dr.Gadget plugin
+* This is a fork of the 'original' Dr.Gadget plugin
 * State is saved to and loaded from IDB by default
 * (hopefully universal) support for all processor modules
   supported by IDA itself (including 64bit etc.)

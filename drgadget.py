@@ -79,6 +79,12 @@
 #                          currently displays information about a segment
 #                        * '7E71D745AC168EE501D18345B38E192E91CFB182' edition
 #
+#   2014/07/30 v0.54b -  * bug fixes
+#                          sorry, it took me quite a while to realize the
+#                          plugin wasn't working on fresh idbs...
+#                        * window docking (experimental only, seems to be
+#                          partially documented/exported by SDK, only)
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
@@ -93,7 +99,6 @@
 """
 known bugs:
 - payload.init()
-- plugin hotkeys
 - ctrl-c suddenly broke?
 
 todo:
@@ -105,7 +110,7 @@ todo:
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.53b"
+__version__      =  "0.54b"
 
 
 import struct, os, sys
@@ -169,6 +174,7 @@ class drgadget(idaapi.plugin_t):
                 return
 
         rv.Show()
+        rv.show_content_viewers()
             
     def term(self):
         if self.hook:
