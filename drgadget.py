@@ -85,6 +85,8 @@
 #                        * window docking (experimental only, seems to be
 #                          partially documented/exported by SDK, only)
 #
+#   2014/07/30 v0.55b - * minor changes
+#
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
@@ -110,7 +112,7 @@ todo:
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.54b"
+__version__      =  "0.55b"
 
 
 import struct, os, sys

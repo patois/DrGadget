@@ -37,10 +37,19 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.capHex    = "Hexdump"
         self.capInfo   = "Info"
 
-
         self.pluginlist         = self.load_plugins()
 
         self.clipboard = None
+
+        self.dav = dataviewers.simpledataviewer_t()
+        self.dav.Create(self.capDisasm)
+
+        self.hv = dataviewers.simpledataviewer_t()
+        self.hv.Create(self.capHex)
+
+        self.iv = dataviewers.simpledataviewer_t()
+        self.iv.Create(self.capInfo)
+
 
         idaapi.simplecustviewer_t.__init__(self)       
 
@@ -240,23 +249,18 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
     def show_content_viewers(self):
        
-        self.dav = dataviewers.simpledataviewer_t()
-        self.dav.Create(self.capDisasm)
-
-        self.hv = dataviewers.simpledataviewer_t()
-        self.hv.Create(self.capHex)
-
-        self.iv = dataviewers.simpledataviewer_t()
-        self.iv.Create(self.capInfo)
-
-
         self.dav.Show()
         self.hv.Show()
         self.iv.Show()
-        idaapi.set_dock_pos(self.capInfo, self.capGadget, 8, 0, 0, 20, 20)
-        idaapi.set_dock_pos(self.capDisasm, self.capGadget, 4)
-        idaapi.set_dock_pos(self.capHex, self.capGadget, 4)
 
+        # TODO: the docking code heavily lacks documentation. seems to be bugged as well.
+        # also, why do we have to call the code twice for the windows for a better alignment?
+        # have to deal with the following layout for now :[
+        for i in xrange(2):
+            idaapi.set_dock_pos(self.capGadget, self.capGadget, idaapi.DP_FLOATING, 0, 0, 1200, 500)
+            idaapi.set_dock_pos(self.capInfo, self.capGadget, idaapi.DP_BOTTOM)
+            idaapi.set_dock_pos(self.capHex, self.capGadget, idaapi.DP_RIGHT)
+            idaapi.set_dock_pos(self.capDisasm, self.capHex, idaapi.DP_RIGHT)
 
     def update_content_viewers(self):
         n = self.GetLineNo()
@@ -315,7 +319,6 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             
         # CTRL
         elif shift == 4:
-
             if vkey == ord("C"):
                 # broke, wtf?
                 # ctrl-c suddenly doesn't work?!
