@@ -143,6 +143,7 @@ class DisasmEngine:
                     # are there any processors that support both
                     # "delay-slot" and "non-delay-slot" return instructions?
                     if self.proc.uses_delay_slot():
+                        inscnt += 1                        
                         disasm.append(self.disasm_single_ins(nextea))
                     return disasm
                 inscnt += 1
@@ -154,17 +155,17 @@ class DisasmEngine:
     
 
 class Payload:
-    def __init__(self, items = []):
-        self.init(items)
-
-    def init(self, items = []):
-        self.items = items
+    def __init__(self):
         self.size = 0
         self.rawbuf = ""
         self.nodename = "$ drgadget"
         self.proc = TargetProcessor()
         # would it be better to use inheritance?
         self.da = DisasmEngine(self.proc)
+        self.init()
+
+    def init(self, items = []):
+        self.items = items
 
     def load_from_idb(self):
         node = idaapi.netnode(0x41414141)
@@ -181,7 +182,7 @@ class Payload:
 
         
     def load_from_file(self, fileName):
-        self.__init__()
+        self.init()
         result = False
         f = None
         try:

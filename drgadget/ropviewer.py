@@ -154,6 +154,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         if item != None:
             self.set_clipboard((n, "x", item))
             self.delete_item(n, False)
+      
 
     def edit_item(self, n):
         item = self.get_item(n)
@@ -212,8 +213,14 @@ class ropviewer_t(idaapi.simplecustviewer_t):
                 self.payload.remove_item(self.GetLineNo())
                 self.refresh()
 
-
-    def add_comment(self, n):
+    def get_comment(self, n):
+        result = ""
+        item = self.get_item(n)
+        if item != None:
+            result = item.comment
+        return result
+    
+    def set_comment(self, n):
         item = self.get_item(n)
         if item != None:
             s = AskStr(item.comment, "Enter Comment")
@@ -254,7 +261,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.iv.Show()
 
         # TODO: the docking code heavily lacks documentation. seems to be bugged as well.
-        # also, why do we have to call the code twice for the windows for a better alignment?
+        # also, why do we have to call the code twice for a better alignment of the docked windows?
         # have to deal with the following layout for now :[
         for i in xrange(2):
             idaapi.set_dock_pos(self.capGadget, self.capGadget, idaapi.DP_FLOATING, 0, 0, 1200, 500)
@@ -335,7 +342,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
                 self.paste_item(n)
 
             elif vkey == ord("N"):
-                self.erase_all()
+                if AskYN(1, "Are you sure?") == 1:
+                    self.erase_all()
 
             elif vkey == ord("L"):
                 self.import_binary()
@@ -346,7 +354,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
         # colon
         elif vkey == 190:
-            self.add_comment(self.GetLineNo())
+            self.set_comment(self.GetLineNo())
 
         elif vkey == ord('O'):
             self.toggle_item(n)
@@ -402,7 +410,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.AddPopupMenu("-")
             self.menu_loadfromfile = self.AddPopupMenu("Import ROP binary", "Ctrl-L")
             self.AddPopupMenu("-")
-            self.menu_insertitem = self.AddPopupMenu("New item", "I")
+            self.menu_insertitem = self.AddPopupMenu("Insert item", "I")
             if self.get_clipboard() != None:
                 self.menu_pasteitem = self.AddPopupMenu("Paste item", "Ctrl-V")
         else:
@@ -447,7 +455,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             print "payload saved to %s" % fileName
 
     def erase_all(self):
-        self.payload.init()
+        self.payload.init(items=[])
         self.refresh()
     
 
@@ -478,7 +486,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             self.toggle_item(n)
 
         elif menu_id == self.menu_comment:
-            self.add_comment(n)
+            self.set_comment(n)
 
         elif menu_id == self.menu_deleteitem:
             self.delete_item(n)

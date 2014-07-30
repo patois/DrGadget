@@ -85,7 +85,10 @@
 #                        * window docking (experimental only, seems to be
 #                          partially documented/exported by SDK, only)
 #
-#   2014/07/30 v0.55b - * minor changes
+#   2014/07/30 v0.55b -  * minor changes
+#                        
+#   2014/07/30 v0.56b -  * fixes, changes
+#                        * added dROP plugin
 #
 #   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
 #
@@ -100,19 +103,18 @@
 
 """
 known bugs:
-- payload.init()
 - ctrl-c suddenly broke?
 
 todo:
-- finish disasm "engine"
+- finish/improve disasm "engine"?
 - support stack directions?
 - add xrefs to "items" class?
-- fix plugin hotkey handling
+- add proper handling/support for plugin hotkeys
 """
 
 forkname         =  "Dr.rer.oec.Gadget"
 __author__       =  "Dennis Elser"
-__version__      =  "0.55b"
+__version__      =  "0.56b"
 
 
 import struct, os, sys
