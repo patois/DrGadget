@@ -10,6 +10,7 @@ all processor architectures supported
 by IDA itself!
 
 what's new:
+===========
 
 * This is a fork of the 'original' Dr.Gadget plugin
 * State is saved to and loaded from IDB by default
@@ -24,3 +25,17 @@ what's new:
 * context-sensitive content viewers
   - now used to display data by default
   - visually highlight return instructions
+* show extended information about modules (ASLR/DEP)
+
+how to install:
+===============
+
+* copy the following files and folders to your IDA/plugins directory:
+  - drgadget.py
+  - drgadget
+
+how to use:
+===========
+* restart IDA
+* use the alt-F5 hotkey to invoke the plugin or
+  invoke the plugin from the IDA plugin menu

@@ -29,6 +29,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.menu_edititem      = None
         self.menu_reset         = None
         self.menu_comment       = None
+        self.menu_refresh       = None
  
         self.window_created      = False
 

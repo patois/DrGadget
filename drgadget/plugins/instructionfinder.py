@@ -1,73 +1,76 @@
 from idaapi import *
 from idc import *
-from idautils import Assemble
+from idautils import Assemble, Modules
 from payload import Item
 
-# the following code was taken from
-# http://hexblog.com/2009/09/assembling_and_finding_instruc.html
-# -----------------------------------------------------------------------
-def FindInstructions(instr, asm_where=None):
-    """
-    Finds instructions/opcodes
-    @return: Returns a tuple(True, [ ea, ... ]) or a tuple(False, "error message")
-    """
-    if not asm_where:
-        # get first segment
-        asm_where = FirstSeg()
-        if asm_where == idaapi.BADADDR:
-            return (False, "No segments defined")
 
-    # regular expression to distinguish between opcodes and instructions
-    re_opcode = re.compile('^[0-9a-f]{2} *', re.I)
+class FindInstructionsForm(Form):
+    def __init__(self):
+        Form.__init__(self, r"""STARTITEM {id:iInstructions}
+BUTTON YES* Ok
+BUTTON CANCEL Cancel
+Find instruction(s)
+{FormChangeCb}
 
-    # split lines
-    lines = instr.split(";")
+Filters:
+<Exclude ASLR modules:{rASLR}>
+<Exclude DEP modules:{rDEP}>
+<Exclude non-executable segments:{rExec}>{cGroup1}>
 
-    # all the assembled buffers (for each instruction)
-    bufs = []
-    for line in lines:
-        if re_opcode.match(line):
-            # convert from hex string to a character list then join the list to form one string
-            buf = ''.join([chr(int(x, 16)) for x in line.split()])
-        else:
-            # assemble the instruction
-            ret, buf = Assemble(asm_where, line)
-            if not ret:
-                return (False, "Failed to assemble:"+line)
-        # add the assembled buffer
-        bufs.append(buf)
+Options:
+<#Refreshes memory content. Might take a while...#Sync memory:{rSync}>{cGroup2}>
 
-    # join the buffer into one string
-    buf = ''.join(bufs)
-    
-    # take total assembled instructions length
-    tlen = len(buf)
+Find instruction(s):
+<#mov eax, 1; pop; pop; 33 C0; ret#:{iInstructions}>
+""", {
+            'cGroup1': Form.ChkGroupControl(("rASLR", "rDEP", "rExec")),
+            'cGroup2': Form.ChkGroupControl(("rSync", "")),
+            'iInstructions': Form.StringInput(),
+            'FormChangeCb': Form.FormChangeCb(self.OnFormChange)
+        })
 
-    # convert from binary string to space separated hex string
-    bin_str = ' '.join(["%02X" % ord(x) for x in buf])
+    def OnFormChange(self, fid):
+        if GetProcessState() == DSTATE_NOTASK:
+            self.EnableField(self.rASLR, False)
+            self.EnableField(self.rDEP, False)
+            self.EnableField(self.rSync, False)
+            self.SetFocusedField(self.iInstructions)
 
-    # find all binary strings
-    print "Searching for: [%s]" % bin_str
-    ea = MinEA()
-    ret = []
-    while True:
-        ea = FindBinary(ea, SEARCH_DOWN, bin_str)
-        if ea == idaapi.BADADDR:
-            break
-        ret.append(ea)
-        ea += tlen
-    if not ret:
-        return (False, "Could not match [%s]" % bin_str)
-    Message("done.\n")
-    return (True, ret)
+        return 1
 
-# -----------------------------------------------------------------------
-# Chooser class
+def AskInstructionsUsingForm():
+    result = (False, "Cancelled")
+    f = FindInstructionsForm()
+    f.Compile()
+
+    f.rASLR.checked = True
+    f.rDEP.checked = True
+    f.rExec.checked = True
+    f.rSync.checked = True
+
+    # cumbersome, but doesn't seem to
+    # work within an instance of the
+    # FindInstructionsForm() class
+    if GetProcessState() == DSTATE_NOTASK:
+        f.rASLR.checked = False
+        f.rDEP.checked = False
+        f.rSync.checked = False
+
+    ok = f.Execute()
+    f.Free()
+    if ok == 1:
+        result = (True, (f.iInstructions.value, f.rASLR.checked, f.rDEP.checked, f.rExec.checked, f.rSync.checked))
+    return result
+
+ 
+
 class SearchResultChoose(Choose2):
-    def __init__(self, list, title, payload, rv):
-        self.list = list
+    def __init__(self, ealist, title):
+        self.list = ealist
+        global payload
+        global ropviewer
         self.payload = payload
-        self.rv = rv
+        self.rv = ropviewer
         self.copy_item_cmd_id = self.append_item_cmd_id = None
         Choose2.__init__(self, \
                          title, \
@@ -78,11 +81,8 @@ class SearchResultChoose(Choose2):
 
     def OnCommand(self, n, cmd_id):
         if cmd_id == self.copy_item_cmd_id:
-            self.rv.set_clipboard((0, "c", Item(self.list[n-1].ea, Item.TYPE_CODE)))
+            ropviewer.set_clipboard((0, "c", Item(self.list[n-1].ea, Item.TYPE_CODE)))
 
-        elif cmd_id == self.append_item_cmd_id:
-            self.payload.append_item(Item(self.list[n-1].ea, Item.TYPE_CODE))
-            self.rv.refresh()
         return 0
 
     def OnClose (self):
@@ -101,55 +101,159 @@ class SearchResultChoose(Choose2):
     def set_copy_item_handler(self, cmd_id):
         self.copy_item_cmd_id = cmd_id
 
-    def set_append_item_handler(self, cmd_id):
-        self.append_item_cmd_id = cmd_id
-        
-
-# -----------------------------------------------------------------------
-# class to represent the results
 class SearchResult:
     def __init__(self, ea):
         self.ea = ea
         self.columns = []
-        if not isCode(GetFlags(ea)):
-            MakeCode(ea)
-        t = idaapi.generate_disasm_line(ea)
-        if t:
-            line = idaapi.tag_remove(t)
+
+        name = SegName(ea)
+        disasm = GetDisasmEx(ea, GENDSM_FORCE_CODE)
+
+        self.columns.append ("%X" % ea)
+        self.columns.append (name)
+        self.columns.append (disasm)
+
+def assemble(instructions):
+    re_opcode = re.compile('^[0-9a-f]{2} *', re.I)
+    lines = instructions.split(";")
+    bufs = []
+    global payload
+
+    for line in lines:
+        if re_opcode.match(line):
+            # convert from hex string to a character list then join the list to form one string
+            buf = ''.join([chr(int(x, 16)) for x in line.split()])
         else:
-            line = ""
-        self.columns.append ("%08X" % ea)
-        n = SegName(ea)
-        self.columns.append (n)
-        self.columns.append (line)
+            # assemble the instruction
+            if payload.proc.supports_assemble():
+                ret, buf = Assemble(FirstSeg(), line)
+                if not ret:
+                    return (False, "Failed to assemble instruction:"+line)
+            else:
+                return (False, "This processor module is not capable of assembling instructions!")       
+        # add the assembled buffer
+        bufs.append(buf)
+    buf = ''.join(bufs)
+    bin_str = ' '.join(["%02X" % ord(x) for x in buf])
+    return (True, bin_str)
+
+
+def FindInstructionsInSegments(segments, bin_str, exclASLR, exclDEP, exclNonExec, checkDllChars=False):
+    ret = []
+    for seg in segments:
+        if (seg.perm & idaapi.SEGPERM_EXEC) == 0 and exclNonExec:
+            continue
+        ea = sea = seg.startEA
+        eea = seg.endEA
+        if checkDllChars:
+            dllchar = get_dll_characteristics(sea, eea-sea)
+            if dllchar:
+                dynbase, nx = get_security_flags(dllchar)
+                if dynbase and exclASLR:
+                    continue
+                if nx and exclDEP:
+                    continue
+
+        while True:
+            ea = find_binary(ea, eea, bin_str, 16, SEARCH_DOWN)
+            if ea == BADADDR:
+                break
+            ret.append(ea)
+            ea += 1
+    if not ret:
+        return (False, "Could not match [%s]" % bin_str)
+    return (True, ret)   
+      
+
+def FindInstructionsInModules(modules, bin_str, exclASLR, exclDEP, exclNonExec):
+    segments = []
+    for mod in modules:
+        if mod.dynbase and exclASLR:
+            continue
+        if mod.nx and exclDEP:
+            continue
+
+        segments += get_segments(mod.base, mod.base + mod.size)
+    return FindInstructionsInSegments(segments, bin_str, exclASLR, exclDEP, exclNonExec)
+    
+
+
+def get_security_flags(dllchars):
+    IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x40
+    IMAGE_DLLCHARACTERISTICS_NX_COMPAT    = 0x100
+
+    dynbase = dllchars & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE != 0
+    nx      = dllchars & IMAGE_DLLCHARACTERISTICS_NX_COMPAT != 0
+    return (dynbase, nx)
+    
+
+class ModuleInfo(object):   
+    def __init__(self, mod):
+        self.dynbase = self.nx = None
+        self.name = mod.name
+        self.base = mod.base
+        self.size = mod.size
+        self.rebase_to = mod.rebase_to
+        self.dll_char = get_dll_characteristics(self.base, self.size)
+        if self.dll_char:
+            self.dynbase, self.nx = get_security_flags(self.dll_char)
+        
+        self.columns = []
+        aslr = "N/A"
+        dep = "N/A"
+        if self.dll_char:
+            aslr = "X" if self.dynbase else ""
+            dep = "X" if self.dynbase else ""
+        self.columns.append(self.name)
+        self.columns.append("%X" % self.base)
+        self.columns.append("%X" % self.size)
+        self.columns.append(aslr)
+        self.columns.append(dep)
+
 
 # -----------------------------------------------------------------------
-def find(payload, ropviewer, s=None, x=False, asm_where=None):
-    b, ret = FindInstructions(s, asm_where)
-    if b:
-        # executable segs only?
-        if x:
-            results = []
-            for ea in ret:
-                seg = idaapi.getseg(ea)
-                if (not seg) or (seg.perm & idaapi.SEGPERM_EXEC) == 0:
-                    continue
-                results.append(SearchResult(ea))
-        else:
-            results = [SearchResult(ea) for ea in ret]
-        title = "Search result for: [%s]" % s
-        idaapi.close_chooser(title)
-        c = SearchResultChoose(results, title, payload, ropviewer)
-        c.Show()
-        c.set_copy_item_handler(c.AddCommand("Copy to payload clipboard"))
-        c.set_append_item_handler(c.AddCommand("Append to payload"))
-    else:
-        print ret
+def get_dll_characteristics(base, size):
+    # minimal, bugged pe parser
+    result = None
+    if size >= 0x40:
+        mz = DbgWord(base)
+        if mz == 0x5A4D or mz == 0x4D5A:
+            offs_pe = DbgDword(base+0x3C)
+            if size > offs_pe + 2:
+                pe = DbgWord(base + offs_pe)
+                if pe == 0x4550:
+                    if size > offs_pe + 0x5E + 2:
+                        result = DbgWord(base + offs_pe + 0x5E)
+    return result
+                    
+def get_modules():
+    results = []
+                            
+    for mod in Modules():
+        results.append(ModuleInfo(mod))
+    return results
+
+def get_segments(startEA=MinEA(), endEA=MaxEA()):
+    segments = []
+
+    seg = getseg(startEA)
+    while seg and seg.endEA <= endEA:
+        segments.append(seg)
+        seg = get_next_seg(seg.startEA)
+        
+    return segments
+
+payload = None
+ropviewer = None
+
 
 class drgadgetplugin_t:
-    def __init__(self, payload, rv):
-        self.payload = payload
-        self.rv = rv
+    def __init__(self, pl, rv):
+        global payload
+        global ropviewer
+        
+        payload = pl
+        ropviewer = rv
         self.menucallbacks = [("Find instructions", self.run, "Ctrl-F3")]
 
     # mandatory
@@ -157,15 +261,37 @@ class drgadgetplugin_t:
     # (label of menu, callback)
     # or None if no callbacks should be installed
     def get_callback_list(self):
-        result = None
-        if self.payload.proc.supports_assemble():
-            result = self.menucallbacks
+        global payload
+        result = self.menucallbacks
         return result
     
     def run(self):
-        s = AskStr ("", "Find instructions (example: mov eax, 1; ret) ")
-        if s:
-            find (self.payload, self.rv, s, AskYN (1, "Scan executable segments only?") == 1)
+        success, s = AskInstructionsUsingForm()
+        if success:
+            s, excl_aslr, excl_dep, excl_nonexec, sync = s
+            if sync:
+                RefreshDebuggerMemory()
+            success, s = assemble(s)
+            if not success:
+                Warning(s)
+                return 0
+            if GetProcessState() == DSTATE_NOTASK:
+                success, ret = FindInstructionsInSegments(get_segments(), s, excl_aslr, excl_dep, excl_nonexec)
+            else:
+                success, ret = FindInstructionsInModules(get_modules(), s, excl_aslr, excl_dep, excl_nonexec)
+            if success:
+                results = []
+                for ea in ret:
+                    results.append(SearchResult(ea))
+                title = "Search result for: [%s]" % s
+                close_chooser(title)
+                c = SearchResultChoose(results, title)
+                c.Show()
+                c.set_copy_item_handler(c.AddCommand("Copy to ropviewer clipboard"))
+            else:
+                Warning(ret)
+        else:
+            Warning(s)
 
     def term(self):
         pass

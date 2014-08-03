@@ -1,0 +1,105 @@
+#################################################
+#
+#   Dr. Gadget
+#   ----------------------------------------
+#
+#   history:
+#   2010/07/24  v0.1   - first public release
+#   2010/07/26  v0.1.1 - added copy/cut/paste
+#   2010/07/31  v0.2   - with kind permission,
+#                        added Elias Bachaalany's
+#                        script to find opcodes/instructions
+#   2010/08/25  v0.3  -  added ARM support
+#                        primitive stack/pc tracing for ARM
+#                        Disassembly view export to file
+#                        string reference scanning in disasm view
+#                        add support for comments both in rop view and disasm view in sync
+#                        sync offset number diplay between ropview and disasm
+#                        by Karthik (neox.fx at gmail dot com)
+#   2012/09/12 v0.31  -  fixed bug which could prevent files from being loaded (thanks Ivanlef0u)
+#                        project is now on github https://github.com/patois/DrGadget.git
+#                        Dr. Gadget is now licensed under the Beerware license
+#   2013/04/07 v0.4   -  * code modularization
+#                        * clean up
+#                        * Dr.Gadget can be customized using "plugins" now
+#                        * Dr.Gadget aims to be compatible to all the processor modules
+#                          that are supported by IDA (including 64bit processor modules)
+#                        * added sample plugins
+#                        * payload state is saved to idb and restored from it, respectively
+#                        
+#   2013/06/19 v0.41  -  * some fixes, new disassembly module
+#
+#   2013/12/18 v0.42  -  * with the introduction of IDA 6.5, there is GetDisasmEx() which allows
+#                          code to be disassembled at arbitrary addresses within the IDB. Therefore,
+#                          it is no longer required to "destroy" the disassembly by undefining code
+#                          using the SDK's MakeUnknown() function, which leaves the original disassembly
+#                          intact =)
+#                        * This version of Dr.Gadget requires IDA > 6.5.
+#
+#   2014/07/25 v0.43a -  * changes to disasm module
+#                        * made it work "somehow" ;-)
+#                        * Decided to release this version as a fork of the "original" Dr.Gadget plugin
+#                          under the project name "Dr.rer.oec.Gadget". Most of the new features haven't
+#                          (extensively) been tested and/or its implementation been finished.
+#                          Although buggy, better release now than never :-P
+#                          Please do feel free to fork/modify/do whatever you want and
+#                          please use responsibly :-)
+#
+#   2014/07/26 v0.44b -  * some fixes here and there
+#                        * '13158F73919A45915A479DD21C6170375C4BE4B7' edition
+#
+#   2014/07/26 v0.45b -  * experimental support for processor modules that
+#                          support (branch) delay slots
+#                        * minor changes/fixes
+#                        * 'C2CC13D4198DC2D0D55BFC5F03FC2A8BF92F1395' edition
+#
+#   2014/07/26 v0.46b -  * various fixes
+#                        * added hotkeys "1" and "2" which decrement and
+#                          increment an item's value, respectively
+#                          -> Comfortably adjust pointers using the keyboard,
+#                             view results using hint popup thingie
+#                        * '564CFB9617B83F3434DB8633D6D501BDEFD5FAAC' edition
+#
+#   2014/07/26 v0.5b -   * fixed instruction finder plugin
+#                        * removed disasmviewer
+#                        * added contentviewer
+#                        * 'C7F255C8329EDA82EAE2E4E161B1F5DA9367FFB2' edition :D
+#
+#   2014/07/26 v0.51b -  * added support for colors to disasm for
+#                          more 'intuitive' navigation
+#                        * stuff
+#                        * '4D53FE63F32EFEB1F7E087D5718DF8F2EE995FF9' edition
+#
+#   2014/07/26 v0.52b -  * added context-sensitive hexview
+#                        * '6B322BC68ED48EE5E48AC3708FC7663B3A4FC629' edition
+#
+#   2014/07/27 v0.53b -  * fixes
+#                        * support for debugger segments
+#                        * added viewer for generic information.
+#                          currently displays information about a segment
+#                        * '7E71D745AC168EE501D18345B38E192E91CFB182' edition
+#
+#   2014/07/30 v0.54b -  * bug fixes
+#                          sorry, it took me quite a while to realize the
+#                          plugin wasn't working on fresh idbs...
+#                        * window docking (experimental only, seems to be
+#                          partially documented/exported by SDK, only)
+#
+#   2014/07/30 v0.55b -  * minor changes
+#                        
+#   2014/07/30 v0.56b -  * fixes, changes
+#                        * added dROP plugin
+#
+#   2014/08/01 v0.57b -  * fixes
+#                        * added modinfo plugin
+#                        * started rewriting the instruction finder plugin
+#
+#   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
+#
+#   bugs:
+#   - yes :(
+#
+#   code:
+#   - mess :(
+#
+##################################################
