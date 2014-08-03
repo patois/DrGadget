@@ -36,6 +36,15 @@ how to install:
 
 how to use:
 ===========
+
 * restart IDA
 * use the alt-F5 hotkey to invoke the plugin or
   invoke the plugin from the IDA plugin menu
+* right-click the Dr.Gadget window for a popup
+  menu to appear.
+* use the context-sensitive popup menu to add/modify/delete
+  items and to invoke Dr.Gadget plugins, such as the instruction finder
+* with an item selected, use "1" and "2" on your keyboard to decrement
+  and increment the item's value, respectively
+* the plugin may be used both during an active debugging
+  session (recommended!) and on a static disassembly listing
