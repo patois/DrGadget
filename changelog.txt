@@ -94,7 +94,15 @@
 #                        * added modinfo plugin
 #                        * started rewriting the instruction finder plugin
 #
-#   contributors       : Elias Bachaalany, Karthik, Ivanlef0u
+#   2014/08/05 v0.58b -  * renamed instructionfinder to gadgetfinder
+#                        * added regex to gadgetfinder
+#                          -> dead slow but gives you more flexibility
+#                          -> assembly instructions can now be searched for
+#                             within any processor architecture
+#                        * added thedude to gadgetfinder
+#
+#
+#   contributors         : Elias Bachaalany, Karthik, Ivanlef0u
 #
 #   bugs:
 #   - yes :(
