@@ -125,12 +125,9 @@ def assemble(instructions):
             buf = ''.join([chr(int(x, 16)) for x in line.split()])
         else:
             # assemble the instruction
-            if payload.proc.supports_assemble():
-                ret, buf = Assemble(FirstSeg(), line)
-                if not ret:
-                    return (False, "Failed to assemble instruction:"+line)
-            else:
-                return (False, "This processor module is not capable of assembling instructions!")       
+            ret, buf = Assemble(FirstSeg(), line)
+            if not ret:
+                return (False, "Failed to assemble instruction:"+line)
         # add the assembled buffer
         bufs.append(buf)
     buf = ''.join(bufs)
@@ -262,7 +259,10 @@ class drgadgetplugin_t:
     # or None if no callbacks should be installed
     def get_callback_list(self):
         global payload
-        result = self.menucallbacks
+        result = None
+
+        if payload.proc.supports_assemble():
+            result = self.menucallbacks
         return result
     
     def run(self):

@@ -18,21 +18,17 @@ what's new:
   supported by IDA itself (including 64bit etc.)
 * "plugin" interface - write a plugin for this plugin! ;-)
 * IDA disassembly is kept in its original state
-* hotkeys "1" and "2" for decrementing and incrementing
-  an item's value, respectively (yay, more interactivity).
-  this allows you to interactively "browse" the disassembly
-  and memory for useful gadgets
+* hotkeys for interactive "browsing" the disassembly
+  and memory for useful gadgets and strings
 * context-sensitive content viewers
-  - now used to display data by default
-  - visually highlight return instructions
 * show extended information about modules (ASLR/DEP)
 
 how to install:
 ===============
 
-* copy the following files and folders to your IDA/plugins directory:
+* copy the following files and folders to the %IDADIR%/plugins folder:
   - drgadget.py
-  - drgadget
+  - /drgadget/*
 
 how to use:
 ===========
@@ -44,7 +40,10 @@ how to use:
   menu to appear.
 * use the context-sensitive popup menu to add/modify/delete
   items and to invoke Dr.Gadget plugins, such as the instruction finder
-* with an item selected, use "1" and "2" on your keyboard to decrement
-  and increment the item's value, respectively
+* import/export existing dumps of a ROP chain from/to disk
+* with an item highlighted, the "-" and "+" keys on the numeric keyboard
+  can be used to adjust addresses / browse memory
 * the plugin may be used both during an active debugging
   session (recommended!) and on a static disassembly listing
+* results will be saved to the IDA database automatically when saving
+  the IDB

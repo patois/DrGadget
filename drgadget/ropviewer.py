@@ -34,7 +34,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.window_created      = False
 
         self.capGadget = "Dr. Gadget"
-        self.capDisasm = "Disassembly"
+        self.capCodeData = "Code / Data"
         self.capHex    = "Hexdump"
         self.capInfo   = "Info"
 
@@ -43,7 +43,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.clipboard = None
 
         self.dav = dataviewers.simpledataviewer_t()
-        self.dav.Create(self.capDisasm)
+        self.dav.Create(self.capCodeData)
 
         self.hv = dataviewers.simpledataviewer_t()
         self.hv.Create(self.capHex)
@@ -268,7 +268,7 @@ class ropviewer_t(idaapi.simplecustviewer_t):
             idaapi.set_dock_pos(self.capGadget, self.capGadget, idaapi.DP_FLOATING, 0, 0, 1200, 500)
             idaapi.set_dock_pos(self.capInfo, self.capGadget, idaapi.DP_BOTTOM)
             idaapi.set_dock_pos(self.capHex, self.capGadget, idaapi.DP_RIGHT)
-            idaapi.set_dock_pos(self.capDisasm, self.capHex, idaapi.DP_RIGHT)
+            idaapi.set_dock_pos(self.capCodeData, self.capHex, idaapi.DP_RIGHT)
 
     def update_content_viewers(self):
         n = self.GetLineNo()
@@ -278,36 +278,45 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.hv.clear()
         self.iv.clear()
 
-        if item != None and item.type == Item.TYPE_CODE:
+        if item != None:
 
-            # get disassembly and hex stream
-            dis = self.payload.da.get_disasm(item.ea)
-            for line in dis:
-                self.dav.add_line(line[0])
-                self.hv.add_line(line[1])
+            if item.type == Item.TYPE_CODE:
+                # get disassembly and hex stream
+                dis = self.payload.da.get_disasm(item.ea)
+                for line in dis:
+                    self.dav.add_line(line[0])
+                    self.hv.add_line(line[1])
 
-            # get various info
-            seg = idaapi.getseg(item.ea)
-            if seg:
-                name      = idaapi.get_true_segm_name(seg)
-                perm      = seg.perm
-                ltype     = "ld" if seg.is_loader_segm() else "dbg"
-                ea_start  = seg.startEA
-                ea_end    = seg.endEA
+                # get various info
+                seg = idaapi.getseg(item.ea)
+                if seg:
+                    name      = idaapi.get_true_segm_name(seg)
+                    perm      = seg.perm
+                    ltype     = "ld" if seg.is_loader_segm() else "dbg"
+                    ea_start  = seg.startEA
+                    ea_end    = seg.endEA
 
-                perms = ""
-                perms += "R" if perm & idaapi.SEGPERM_READ != 0 else "."
-                perms += "W" if perm & idaapi.SEGPERM_WRITE != 0 else "."
-                perms += "X" if perm & idaapi.SEGPERM_EXEC != 0 else "."                
-                self.iv.add_line("<%s> [%X - %X], %s, [%s]" % (name, ea_start, ea_end, ltype, perms))
-
+                    perms = ""
+                    perms += "R" if perm & idaapi.SEGPERM_READ != 0 else "."
+                    perms += "W" if perm & idaapi.SEGPERM_WRITE != 0 else "."
+                    perms += "X" if perm & idaapi.SEGPERM_EXEC != 0 else "."                
+                    self.iv.add_line("<%s> [%X - %X], %s, [%s]" % (name, ea_start, ea_end, ltype, perms))
+            else:
+                stype = GetStringType(item.ea)
+                if stype is not None:
+                    scontent = GetString(item.ea, -1, stype)
+                    if scontent != None and len(scontent):
+                        self.dav.add_line(idaapi.COLSTR("\"%s\"" % scontent, idaapi.SCOLOR_DSTR))
+                        #length = idaapi.get_max_ascii_length(item.ea, stype, idaapi.ALOPT_IGNHEADS)
+                        #self.hv.add_line()
+                else:
+                    scontent = GetString(item.ea, -1, ASCSTR_C)
+                    if scontent != None and len(scontent):
+                        self.dav.add_line("\"%s\"" % scontent)
 
         self.dav.update()
         self.hv.update()
         self.iv.update()
-
-    def OnClick(self, shift):       
-        self.update_content_viewers()                
 
     def OnDblClick(self, shift):
         n = self.GetLineNo()
@@ -316,6 +325,8 @@ class ropviewer_t(idaapi.simplecustviewer_t):
 
     def OnKeydown(self, vkey, shift):
         n = self.GetLineNo()
+
+        # print "OnKeydown, vk=%d shift=%d" % (vkey, shift)
         
         # ESCAPE
         if vkey == 27:
@@ -328,9 +339,6 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         # CTRL
         elif shift == 4:
             if vkey == ord("C"):
-                # broke, wtf?
-                # ctrl-c suddenly doesn't work?!
-                print "dbg: copy!"
                 self.copy_item(n)
            
             elif vkey == ord("X"):
@@ -372,10 +380,12 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         elif vkey == ord("R"):
             self.refresh()
 
-        elif vkey == ord("1"):
+        # numeric key -
+        elif vkey == 109:
             self.dec_item_value(n)
 
-        elif vkey == ord("2"):
+        # numeric key +
+        elif vkey == 107:
             self.inc_item_value(n)
 
         else:
@@ -384,6 +394,9 @@ class ropviewer_t(idaapi.simplecustviewer_t):
         self.update_content_viewers()        
         return True
 
+    def OnCursorPosChanged(self):
+        # TODO: update on Y coordinate changes only
+        self.update_content_viewers()
 
     def OnHint(self, lineno):
         if self.payload.get_item(lineno).type != Item.TYPE_CODE:

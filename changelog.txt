@@ -101,6 +101,10 @@
 #                             within any processor architecture
 #                        * added thedude to gadgetfinder
 #
+#   2016/01/11 v0.59b -  * minor improvements, fixes
+#                        * changed caption of disassembly caption viewer
+#                        * code / data viewer displays disassembly and strings
+#                        * changed some hotkeys
 #
 #   contributors         : Elias Bachaalany, Karthik, Ivanlef0u
 #

@@ -1,6 +1,8 @@
 """
 known bugs:
-- ctrl-c suddenly broke?
+- the dr.rer.oec.gadget GUI needs an overhaul. if you
+  are experiencing any issues, try closing the window
+  and reopen it using the plugin hotkey
 
 todo:
 - finish/improve disasm "engine"?
@@ -11,7 +13,7 @@ todo:
 
 pluginname       =  "Dr.Gadget"
 __author__       =  "patois"
-__version__      =  "0.57b"
+__version__      =  "0.59b"
 
 
 import struct, os, sys
